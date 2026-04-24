@@ -46,13 +46,7 @@ export function Login() {
           throw error;
         }
         
-        // Check if email confirmation is required (session is null)
-        if (data.user && !data.session) {
-          setAwaitingOtp(true);
-          setEmailForOtp(email);
-          setMessage('Confirmation code sent to your email.');
-          return;
-        }
+        // Removed email OTP wait
         
         const user = data?.user;
         if (user?.email === 'haljibon5@gmail.com') {
@@ -132,19 +126,14 @@ export function Login() {
     setIsLoading(true);
     setError('');
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
+      const { error } = await supabase.auth.verifyOtp({
         email: emailForOtp,
         token,
-        type: 'signup'
+        type: 'recovery'
       });
       if (error) throw error;
       
-      const user = data?.user;
-      if (user?.email === 'haljibon5@gmail.com') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate('/reset-password');
     } catch (err: any) {
       setError(err.message || 'Invalid verification code');
     } finally {
@@ -200,14 +189,14 @@ export function Login() {
               ))}
             </div>
             <Button onClick={handleVerifyOtp} className="w-full" size="lg" isLoading={isLoading}>
-              Verify & Create Account
+              Verify & Reset Password
             </Button>
             <button 
               type="button"
               onClick={() => { setAwaitingOtp(false); setError(''); setMessage(''); setOtp(['','','','','','']); }}
               className="w-full text-sm text-text-muted hover:text-primary transition-colors mt-4"
             >
-              Back to Sign Up
+              Back to Sign In
             </button>
           </div>
         ) : isForgotPassword ? (

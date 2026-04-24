@@ -9,6 +9,9 @@ import { Checkout } from './pages/Checkout';
 import { Dashboard } from './pages/Dashboard';
 import { Admin } from './pages/Admin';
 import { Products } from './pages/Products';
+import { Contact } from './pages/Contact';
+import { Returns } from './pages/Returns';
+import { Terms } from './pages/Terms';
 import { useAuthStore } from './store/useAuthStore';
 
 export default function App() {
@@ -32,6 +35,9 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/returns" element={<Returns />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/dashboard" element={<Dashboard />} />

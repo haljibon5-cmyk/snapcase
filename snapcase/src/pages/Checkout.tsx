@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import imageCompression from 'browser-image-compression';
 import { UploadCloud, CheckCircle, Landmark, ShoppingBag, X } from 'lucide-react';
+import { useCurrencyStore } from '../store/useCurrencyStore';
 
 const schema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -22,6 +23,7 @@ type FormData = z.infer<typeof schema>;
 
 export function Checkout() {
   const { items, totalPrice, clearCart } = useCartStore();
+  const { formatPrice } = useCurrencyStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +46,12 @@ export function Checkout() {
     const fetchSettings = async () => {
       const { data } = await supabase.from('products').select('description').eq('id', 'store_settings').single();
       if (data && data.description) {
-        setBankDetails(data.description);
+        try {
+          const parsed = JSON.parse(data.description);
+          setBankDetails(parsed.bankDetails || '');
+        } catch(e) {
+          setBankDetails(data.description);
+        }
       }
     };
     fetchSettings();
@@ -325,7 +332,7 @@ export function Checkout() {
                       <p className="text-xs text-text-muted">Qty: {item.quantity}</p>
                     </div>
                     <div className="font-semibold text-sm">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      {formatPrice(item.price * item.quantity)}
                     </div>
                   </div>
                 ))}
@@ -349,7 +356,7 @@ export function Checkout() {
               <div className="space-y-3 pt-6 border-t border-gray-100 mb-8">
                 <div className="flex justify-between text-sm text-text-muted">
                   <span>Subtotal</span>
-                  <span>${basePrice.toFixed(2)}</span>
+                  <span>{formatPrice(basePrice)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-text-muted">
                   <span>Shipping</span>
@@ -358,12 +365,12 @@ export function Checkout() {
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-sm text-green-600 font-medium">
                     <span>Discount</span>
-                    <span>-${discountAmount.toFixed(2)}</span>
+                    <span>-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold pt-4 border-t border-gray-100">
                   <span>Total</span>
-                  <span>${finalPrice.toFixed(2)}</span>
+                  <span>{formatPrice(finalPrice)}</span>
                 </div>
               </div>
 
@@ -373,7 +380,7 @@ export function Checkout() {
                 className="w-full" 
                 isLoading={isLoading}
               >
-                Place Order (${finalPrice.toFixed(2)})
+                Place Order ({formatPrice(finalPrice)})
               </Button>
               
               <p className="text-xs text-text-muted text-center mt-4 flex items-center justify-center gap-1">

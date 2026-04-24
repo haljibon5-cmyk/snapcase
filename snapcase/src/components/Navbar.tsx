@@ -1,73 +1,148 @@
-import { Link } from 'react-router-dom';
-import { ShoppingBag, User, Search, Menu } from 'lucide-react';
-import { useCartStore } from '../store/useCartStore';
-import { useAuthStore } from '../store/useAuthStore';
-import { useState } from 'react';
-import { CartDrawer } from './CartDrawer';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ShoppingBag, User, Search, Menu } from "lucide-react";
+import { useCartStore } from "../store/useCartStore";
+import { useAuthStore } from "../store/useAuthStore";
+import { CartDrawer } from "./CartDrawer";
+import { NavDrawer } from "./NavDrawer";
+import { supabase } from "../lib/supabase";
 
 export function Navbar() {
   const totalItems = useCartStore((state) => state.totalItems());
   const { user, profile } = useAuthStore();
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [headerLogoImage, setHeaderLogoImage] = useState<string | null>(null);
+  const [headerLogoText, setHeaderLogoText] = useState("SnapCase");
+  const [headerLogoFontSize, setHeaderLogoFontSize] = useState("text-2xl");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await supabase
+          .from("products")
+          .select("*")
+          .eq("id", "store_settings")
+          .single();
+        if (data && data.description) {
+          const parsed = JSON.parse(data.description);
+          if (parsed.headerLogoImage) {
+            setHeaderLogoImage(parsed.headerLogoImage);
+          } else if (parsed.headerLogoImage === "") {
+            setHeaderLogoImage(null);
+          }
+          if (parsed.headerLogoText !== undefined) {
+            setHeaderLogoText(parsed.headerLogoText);
+          }
+          if (parsed.headerLogoFontSize !== undefined) {
+            setHeaderLogoFontSize(parsed.headerLogoFontSize);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading navbar settings:", e);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 glass border-b border-black/5">
-        <div className="max-w-7xl mx-auto px-10">
-          <div className="flex items-center justify-between h-[50px]">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <span className="font-bold text-[18px] tracking-[-0.5px] text-primary uppercase">SnapCase</span>
-            </Link>
+      <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-black/5">
+        <div className="max-w-[1600px] mx-auto px-6 md:px-12">
+          <div className="flex items-center justify-between h-[70px]">
+            {/* Hamburger Nav (Left) */}
+            <div className="flex justify-start w-1/3">
+              <button
+                onClick={() => setIsNavOpen(true)}
+                className="text-gray-900 hover:text-gray-500 transition-colors"
+                aria-label="Open menu"
+              >
+                <Menu className="w-6 h-6 stroke-[1.5] text-[#86bfbf]" />
+              </button>
+            </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-[30px]">
-              <Link to="/" className="text-[12px] font-medium text-text-main opacity-80 hover:opacity-100 transition-opacity">Home</Link>
-              <Link to="/products" className="text-[12px] font-medium text-text-main opacity-80 hover:opacity-100 transition-opacity">Products</Link>
-            </nav>
+            {/* Logo */}
+            <div className="flex justify-center w-1/3">
+              <Link to="/" className="flex items-center">
+                {headerLogoImage ? (
+                  <img
+                    src={headerLogoImage}
+                    alt={headerLogoText || "SnapCase"}
+                    className="h-[30px] object-contain"
+                  />
+                ) : (
+                  <span
+                    className={`font-serif tracking-wider text-[#86bfbf] ${headerLogoFontSize}`}
+                  >
+                    {headerLogoText}
+                  </span>
+                )}
+              </Link>
+            </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-[20px]">
-              <button className="w-8 h-8 rounded-full bg-[#eee] flex items-center justify-center text-text-main hover:bg-gray-200 transition-colors hidden sm:flex">
-                <Search className="w-4 h-4" />
-              </button>
-              
+            <div className="flex items-center justify-end gap-6 w-1/3">
+              <form
+                onSubmit={handleSearch}
+                className="hidden sm:flex items-center relative"
+              >
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search item code or name..."
+                  className="pl-3 pr-8 py-1.5 rounded-full border border-gray-200 text-sm focus:outline-none focus:border-[#86bfbf] focus:ring-1 focus:ring-[#86bfbf] transition-shadow w-48 text-gray-700"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 text-[#86bfbf] hover:text-gray-500 transition-colors"
+                >
+                  <Search className="w-4 h-4 stroke-[1.5]" />
+                </button>
+              </form>
+
               {user ? (
-                <Link to={profile?.role === 'admin' ? '/admin' : '/dashboard'} className="w-8 h-8 rounded-full bg-[#eee] flex items-center justify-center text-text-main hover:bg-gray-200 transition-colors">
-                  <User className="w-4 h-4" />
+                <Link
+                  to={profile?.role === "admin" ? "/admin" : "/dashboard"}
+                  className="text-[#86bfbf] hover:text-gray-500 transition-colors"
+                >
+                  <User className="w-5 h-5 stroke-[1.5]" />
                 </Link>
               ) : (
-                <Link to="/login" className="hidden sm:flex items-center justify-center px-4 h-8 rounded-full bg-primary text-white text-[12px] font-medium hover:bg-primary-hover transition-colors">
-                  Sign In
+                <Link
+                  to="/login"
+                  className="text-[#86bfbf] hover:text-gray-500 transition-colors"
+                >
+                  <User className="w-5 h-5 stroke-[1.5]" />
                 </Link>
               )}
-              
-              {!user && (
-                <Link to="/login" className="w-8 h-8 rounded-full bg-[#eee] flex items-center justify-center text-text-main hover:bg-gray-200 transition-colors sm:hidden">
-                  <User className="w-4 h-4" />
-                </Link>
-              )}
-              
-              <button 
+
+              <button
                 onClick={() => setIsCartOpen(true)}
-                className="w-8 h-8 rounded-full bg-[#eee] flex items-center justify-center text-text-main hover:bg-gray-200 transition-colors relative"
+                className="text-[#86bfbf] hover:text-gray-500 transition-colors relative flex items-center gap-2"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-5 h-5 stroke-[1.5]" />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+                  <span className="absolute -bottom-2 -right-2 w-4 h-4 bg-[#86bfbf] text-white text-[10px] font-bold flex items-center justify-center rounded-full">
                     {totalItems}
                   </span>
                 )}
-              </button>
-
-              <button className="w-8 h-8 rounded-full bg-[#eee] flex items-center justify-center text-text-main hover:bg-gray-200 transition-colors md:hidden">
-                <Menu className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
       </header>
 
+      <NavDrawer isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   );

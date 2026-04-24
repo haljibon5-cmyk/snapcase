@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
 import { mockProducts } from '../lib/mockData';
 import { useCartStore } from '../store/useCartStore';
+import { useCurrencyStore } from '../store/useCurrencyStore';
 
 const defaultProducts = mockProducts.slice(0, 4);
 
@@ -44,6 +45,7 @@ export function HeroSlider({ products: propProducts }: HeroSliderProps) {
   const [items, setItems] = useState<any[]>(defaultProducts);
   const navigate = useNavigate();
   const addItem = useCartStore((state) => state.addItem);
+  const { formatPrice } = useCurrencyStore();
   
   useEffect(() => {
     if (propProducts && propProducts.length > 0) {
@@ -141,7 +143,7 @@ export function HeroSlider({ products: propProducts }: HeroSliderProps) {
                   className="mt-6 bg-gradient-to-r from-[#ff4d8d] to-[#ff75a6] hover:from-[#e63976] hover:to-[#ff4d8d] shadow-[0_10px_20px_rgba(255,77,141,0.2)] border-0"
                   onClick={() => handleBuyNow(items[currentIndex])}
                 >
-                  Buy Now - ${items[currentIndex].price}
+                  Buy Now - {formatPrice(items[currentIndex].price)}
                 </Button>
               </div>
             </motion.div>

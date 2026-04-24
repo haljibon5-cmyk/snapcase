@@ -3,6 +3,7 @@ import { useCartStore } from '../store/useCartStore';
 import { Button } from './Button';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { useCurrencyStore } from '../store/useCurrencyStore';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface CartDrawerProps {
 
 export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
   const { items, removeItem, updateQuantity, totalPrice } = useCartStore();
+  const { formatPrice } = useCurrencyStore();
   const navigate = useNavigate();
 
   const handleCheckout = () => {
@@ -71,7 +73,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       </button>
                     </div>
                     <div className="flex justify-between items-end">
-                      <p className="font-semibold">${item.price.toFixed(2)}</p>
+                      <p className="font-semibold">{formatPrice(item.price)}</p>
                       <div className="flex items-center gap-3 bg-gray-50 rounded-full px-2 py-1 border border-gray-100">
                         <button 
                           onClick={() => updateQuantity(item.productId, Math.max(1, item.quantity - 1))}
@@ -99,7 +101,7 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
           <div className="p-6 border-t border-gray-100 bg-gray-50/50">
             <div className="flex justify-between mb-4">
               <span className="text-text-muted">Subtotal</span>
-              <span className="font-semibold">${totalPrice().toFixed(2)}</span>
+              <span className="font-semibold">{formatPrice(totalPrice())}</span>
             </div>
             <Button className="w-full" size="lg" onClick={handleCheckout}>
               Checkout

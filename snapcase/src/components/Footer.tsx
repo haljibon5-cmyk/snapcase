@@ -1,59 +1,107 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useCurrencyStore, rates, CurrencyCode } from '../store/useCurrencyStore';
 
 export function Footer() {
+  const [quickLinks, setQuickLinks] = useState([{ name: 'Contact Us', url: '/contact' }, { name: 'Returns', url: '/returns' }]);
+  const [policies, setPolicies] = useState([{ name: 'Refund Policy', url: '/refunds' }, { name: 'Returns/Exchanges', url: '/returns' }]);
+  const [footerLogoText, setFooterLogoText] = useState('SnapCase');
+  const [footerLogoImage, setFooterLogoImage] = useState('');
+  const [footerDescription, setFooterDescription] = useState('Premium phone case designs. Experience quality, protection, and elegance in every detail.');
+  
+  const { currency, setCurrency } = useCurrencyStore();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('description')
+          .eq('id', 'store_settings')
+          .single();
+          
+        if (data && !error && data.description) {
+          try {
+            const parsed = JSON.parse(data.description);
+            if (parsed.quickLinks && Array.isArray(parsed.quickLinks)) {
+              setQuickLinks(parsed.quickLinks);
+            }
+            if (parsed.policies && Array.isArray(parsed.policies)) {
+              setPolicies(parsed.policies);
+            }
+            if (parsed.footerLogoText !== undefined) setFooterLogoText(parsed.footerLogoText);
+            if (parsed.footerLogoImage !== undefined) setFooterLogoImage(parsed.footerLogoImage);
+            if (parsed.footerDescription !== undefined) setFooterDescription(parsed.footerDescription);
+          } catch(e) {}
+        }
+      } catch (err) {}
+    };
+    fetchSettings();
+  }, []);
+
   return (
-    <footer className="bg-surface border-t border-gray-200/50 pt-16 pb-8 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          <div className="col-span-1 md:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl">
-                S
-              </div>
-              <span className="font-semibold text-xl tracking-tight">SnapCase</span>
+    <footer className="bg-[#faf9f6] pt-16 pb-8 mt-auto border-t border-black/10">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16 text-center md:text-left">
+          <div className="col-span-1">
+            <Link to="/" className="inline-block mb-6">
+              {footerLogoImage ? (
+                <img src={footerLogoImage} alt={footerLogoText || 'SnapCase'} className="h-10 w-auto object-contain max-w-[200px]" />
+              ) : (
+                <span className="font-serif text-2xl tracking-wider text-black">{footerLogoText || 'SnapCase'}</span>
+              )}
             </Link>
-            <p className="text-text-muted text-sm leading-relaxed">
-              Premium phone case designs. Experience quality, protection, and elegance in every detail.
+            <p className="text-gray-500 text-sm leading-relaxed tracking-wide max-w-sm mx-auto md:mx-0 whitespace-pre-wrap">
+              {footerDescription}
             </p>
           </div>
           
-          <div>
-            <h3 className="font-semibold mb-4">Shop</h3>
-            <ul className="space-y-3 text-sm text-text-muted">
-              <li><Link to="/products" className="hover:text-primary transition-colors">All Cases</Link></li>
-              <li><Link to="/categories/silicone" className="hover:text-primary transition-colors">Silicone Cases</Link></li>
-              <li><Link to="/categories/leather" className="hover:text-primary transition-colors">Leather Cases</Link></li>
-              <li><Link to="/categories/clear" className="hover:text-primary transition-colors">Clear Cases</Link></li>
-            </ul>
+          <div className="md:flex md:flex-col md:items-center">
+            <div className="text-center">
+              <h3 className="text-sm font-semibold tracking-widest uppercase mb-6 text-black">Quick Links</h3>
+              <ul className="space-y-4 text-sm text-gray-500">
+                {quickLinks.map((link, idx) => (
+                  <li key={idx}>
+                    <Link to={link.url} className="hover:text-black transition-colors">{link.name}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
-          <div>
-            <h3 className="font-semibold mb-4">Support</h3>
-            <ul className="space-y-3 text-sm text-text-muted">
-              <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link></li>
-              <li><Link to="/faq" className="hover:text-primary transition-colors">FAQs</Link></li>
-              <li><Link to="/shipping" className="hover:text-primary transition-colors">Shipping & Returns</Link></li>
-              <li><Link to="/track" className="hover:text-primary transition-colors">Track Order</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-4">Legal</h3>
-            <ul className="space-y-3 text-sm text-text-muted">
-              <li><Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-            </ul>
+          <div className="md:flex md:flex-col md:items-end">
+            <div className="md:text-right">
+              <h3 className="text-sm font-semibold tracking-widest uppercase mb-6 text-black">Policies</h3>
+              <ul className="space-y-4 text-sm text-gray-500">
+                {policies.map((policy, idx) => (
+                  <li key={idx}>
+                    <Link to={policy.url} className="hover:text-black transition-colors">{policy.name}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
         
-        <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-text-muted">
-            © {new Date().getFullYear()} SnapCase. All rights reserved.
-          </p>
-          <div className="flex gap-4 text-sm text-text-muted">
-            <span>United States</span>
-            <span>English</span>
+        <div className="pt-8 border-t border-black/10 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex gap-4 text-xs tracking-widest relative group">
+            <select 
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+              className="appearance-none bg-transparent hover:text-black cursor-pointer transition-colors text-gray-500 uppercase outline-none focus:ring-0"
+            >
+              {Object.keys(rates).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-[-15px] top-[2px] text-gray-500 group-hover:text-black">
+              ▼
+            </span>
           </div>
+          <p className="text-xs text-gray-500 tracking-widest">
+            © {new Date().getFullYear()} SnapCase
+          </p>
         </div>
       </div>
     </footer>
