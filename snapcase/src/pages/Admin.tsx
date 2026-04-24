@@ -2096,23 +2096,75 @@ export function Admin() {
                       key={order.id}
                       className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50"
                     >
-                      <td className="py-4">
-                        <div className="text-sm font-medium">#{order.id}</div>
-                        <div className="text-xs text-text-muted">
+                      <td className="py-4 align-top">
+                        <div className="text-sm font-medium mb-1">
+                          #{order.id}
+                        </div>
+                        <div className="text-xs text-text-muted mb-3">
                           {new Date(order.created_at).toLocaleDateString()}
                         </div>
-                        <div
-                          className="text-xs mt-1 max-w-[200px] truncate text-primary font-medium"
-                          title={
-                            Array.isArray(order.items)
-                              ? order.items.map((i: any) => i.name).join(", ")
-                              : "Items hidden"
-                          }
-                        >
-                          {Array.isArray(order.items)
-                            ? `${order.items.length} items (Hover)`
-                            : "View Details"}
-                        </div>
+                        {Array.isArray(order.items) ? (
+                          <div className="flex flex-col gap-3">
+                            {order.items.map((item: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="bg-gray-50 border border-gray-100 p-2 rounded-lg text-xs"
+                              >
+                                <div className="font-semibold text-gray-800 break-words mb-1">
+                                  {item.name}
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-gray-600">
+                                  <div>
+                                    <span className="text-gray-400">Qty:</span>{" "}
+                                    {item.quantity}
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">
+                                      Price:
+                                    </span>{" "}
+                                    ${(item.price * item.quantity).toFixed(2)}
+                                  </div>
+                                  {item.itemCode && (
+                                    <div>
+                                      <span className="text-gray-400">
+                                        Code:
+                                      </span>{" "}
+                                      {item.itemCode}
+                                    </div>
+                                  )}
+                                  {item.phoneModel && (
+                                    <div>
+                                      <span className="text-gray-400">
+                                        Model:
+                                      </span>{" "}
+                                      {item.phoneModel}
+                                    </div>
+                                  )}
+                                  {item.caseType && (
+                                    <div>
+                                      <span className="text-gray-400">
+                                        Case:
+                                      </span>{" "}
+                                      {item.caseType}
+                                    </div>
+                                  )}
+                                  {item.color && (
+                                    <div>
+                                      <span className="text-gray-400">
+                                        Color:
+                                      </span>{" "}
+                                      {item.color}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-500">
+                            Items hidden
+                          </div>
+                        )}
                       </td>
                       <td className="py-4">
                         <div className="text-sm font-medium">

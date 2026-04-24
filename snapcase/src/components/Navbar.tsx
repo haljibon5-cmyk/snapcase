@@ -16,6 +16,7 @@ export function Navbar() {
   const [headerLogoImage, setHeaderLogoImage] = useState<string | null>(null);
   const [headerLogoText, setHeaderLogoText] = useState("SnapCase");
   const [headerLogoFontSize, setHeaderLogoFontSize] = useState("text-2xl");
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,6 +43,8 @@ export function Navbar() {
         }
       } catch (e) {
         console.error("Error loading navbar settings:", e);
+      } finally {
+        setIsLoadingSettings(false);
       }
     };
     fetchSettings();
@@ -73,19 +76,20 @@ export function Navbar() {
             {/* Logo */}
             <div className="flex justify-center w-1/3">
               <Link to="/" className="flex items-center">
-                {headerLogoImage ? (
-                  <img
-                    src={headerLogoImage}
-                    alt={headerLogoText || "SnapCase"}
-                    className="h-[30px] object-contain"
-                  />
-                ) : (
-                  <span
-                    className={`font-serif tracking-wider text-[#86bfbf] ${headerLogoFontSize}`}
-                  >
-                    {headerLogoText}
-                  </span>
-                )}
+                {!isLoadingSettings &&
+                  (headerLogoImage ? (
+                    <img
+                      src={headerLogoImage}
+                      alt={headerLogoText || "SnapCase"}
+                      className="h-[30px] object-contain"
+                    />
+                  ) : (
+                    <span
+                      className={`font-serif tracking-wider text-[#86bfbf] ${headerLogoFontSize}`}
+                    >
+                      {headerLogoText}
+                    </span>
+                  ))}
               </Link>
             </div>
 
