@@ -120,12 +120,6 @@ export function ProductDetails() {
     colorName = meta.colorName || "Standard Pattern";
     itemCode = meta.itemCode || "";
 
-    // Fallback logic for stock
-    stockLeft =
-      meta.stock !== undefined && meta.stock !== null
-        ? meta.stock
-        : product.stock || 0;
-
     availableColors = meta.colors || [];
 
     const casePrices = {
@@ -182,12 +176,36 @@ export function ProductDetails() {
     ];
 
     if (meta.models && Array.isArray(meta.models) && meta.models.length > 0) {
-      phoneModels = meta.models.map((m: string) => ({
-        id: m,
-        name: m,
-        priceOffset: 0,
-        brand: "custom",
-      }));
+      phoneModels = meta.models.map((m: any) => {
+        let name = "";
+        let stock = 100;
+        let brand = "custom";
+
+        if (typeof m === "string") {
+          name = m;
+        } else {
+          name = m.name;
+          if (m.stock !== undefined) stock = m.stock;
+        }
+
+        const nameLower = name.toLowerCase();
+        if (nameLower.includes("iphone") || nameLower.includes("apple")) {
+          brand = "apple";
+        } else if (
+          nameLower.includes("galaxy") ||
+          nameLower.includes("samsung")
+        ) {
+          brand = "samsung";
+        }
+
+        return {
+          id: name,
+          name: name,
+          priceOffset: 0,
+          brand: brand,
+          stock: stock,
+        };
+      });
     } else {
       const categoryStr = (product.category || "").toLowerCase();
       if (categoryStr.includes("iphone") || categoryStr.includes("apple")) {
@@ -205,7 +223,27 @@ export function ProductDetails() {
     }
 
     selectedModelInfo =
-      phoneModels.find((m) => m.id === selectedModelId) || phoneModels[0];
+      phoneModels.find(
+        (m) =>
+          m.id === selectedModelId && (m.stock === undefined || m.stock > 0),
+      ) ||
+      phoneModels.find((m) => m.stock === undefined || m.stock > 0) ||
+      phoneModels[0];
+
+    // Ensure selectedModelId matches the found info
+    if (selectedModelInfo && selectedModelInfo.id !== selectedModelId) {
+      setTimeout(() => setSelectedModelId(selectedModelInfo.id), 0);
+    }
+
+    // Fallback logic for stock
+    if (selectedModelInfo && selectedModelInfo.stock !== undefined) {
+      stockLeft = selectedModelInfo.stock;
+    } else {
+      stockLeft =
+        meta.stock !== undefined && meta.stock !== null
+          ? meta.stock
+          : product.stock || 0;
+    }
 
     currentPrice =
       product.price +
@@ -221,6 +259,7 @@ export function ProductDetails() {
     if (product && selectedModelInfo && selectedCaseTypeInfo) {
       addItem({
         productId: `${product.id}-${selectedModelInfo.id}-${selectedCaseTypeInfo.id}-${selectedColor ? selectedColor.name.replace(/\s+/g, "-") : "default"}`,
+        baseProductId: product.id,
         name: `${product.name} (${selectedColor ? selectedColor.name : "Standard Pattern"} - ${selectedModelInfo.name} - ${selectedCaseTypeInfo.name})`,
         price: currentPrice,
         imageUrl: selectedColor?.url || product.image_url || product.imageUrl,
@@ -438,31 +477,45 @@ export function ProductDetails() {
                     const isSelected = selectedColor?.name === color.name;
                     return (
                       <div key={idx} className="flex flex-col items-center">
-                        <div
-                          onClick={() => {
-                            setSelectedColor(color);
-                            setActiveImageIndex(0);
-                          }}
-                          className={`w-14 h-14 border-2 rounded p-0.5 relative hover:opacity-90 cursor-pointer ${isSelected ? "border-black" : "border-transparent"}`}
-                        >
-                          <img
-                            src={color.url}
-                            className="w-full h-full object-cover rounded-[2px]"
-                            alt={color.name}
-                            referrerPolicy="no-referrer"
-                          />
-                          {isSelected && (
-                            <div className="absolute -bottom-1 -right-1 bg-white rounded-full">
-                              <Check className="w-3.5 h-3.5 text-black bg-white rounded-full" />
+                        {color.url ? (
+                          <>
+                            <div
+                              onClick={() => {
+                                setSelectedColor(color);
+                                setActiveImageIndex(0);
+                              }}
+                              className={`w-14 h-14 border-2 rounded p-0.5 relative hover:opacity-90 cursor-pointer ${isSelected ? "border-black" : "border-transparent"}`}
+                            >
+                              <img
+                                src={color.url}
+                                className="w-full h-full object-cover rounded-[2px]"
+                                alt={color.name}
+                                referrerPolicy="no-referrer"
+                              />
+                              {isSelected && (
+                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full">
+                                  <Check className="w-3.5 h-3.5 text-black bg-white rounded-full" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <span
-                          className="text-[11px] text-gray-600 mt-1 max-w-[56px] text-center truncate"
-                          title={color.name}
-                        >
-                          {color.name}
-                        </span>
+                            <span
+                              className="text-[11px] text-gray-600 mt-1 max-w-[56px] text-center truncate"
+                              title={color.name}
+                            >
+                              {color.name}
+                            </span>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setSelectedColor(color);
+                              setActiveImageIndex(0);
+                            }}
+                            className={`px-3 py-1.5 border rounded-[100px] text-[13px] min-h-[36px] flex items-center justify-center ${isSelected ? "border-[#222] text-[#222] font-bold bg-white" : "border-[#e0e0e0] text-[#222] bg-white hover:border-[#b0b0b0]"}`}
+                          >
+                            {color.name}
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -475,23 +528,18 @@ export function ProductDetails() {
               <h3 className="text-[14px] text-[#222] font-semibold mb-3 flex items-center justify-between">
                 Case Type
               </h3>
-              <div className="flex flex-wrap gap-2.5">
-                {caseTypes.map((type) => {
-                  const isSelected = selectedCaseTypeId === type.id;
-                  return (
-                    <button
-                      key={type.id}
-                      onClick={() => setSelectedCaseTypeId(type.id)}
-                      className={`px-3.5 py-1.5 rounded-[100px] text-[13px] border ${
-                        isSelected
-                          ? "border-[#222] text-[#222] font-bold bg-white"
-                          : "border-[#e0e0e0] text-[#222] bg-white hover:border-[#b0b0b0]"
-                      }`}
-                    >
+              <div className="w-full">
+                <select
+                  value={selectedCaseTypeId}
+                  onChange={(e) => setSelectedCaseTypeId(e.target.value)}
+                  className="w-full p-3 border border-[#e0e0e0] rounded-lg text-[14px] bg-white outline-none focus:border-[#222] transition-colors"
+                >
+                  {caseTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
                       {type.name}
-                    </button>
-                  );
-                })}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -500,24 +548,61 @@ export function ProductDetails() {
               <h3 className="text-[14px] text-[#222] font-semibold mb-3 flex items-center justify-between">
                 Compatible Model
               </h3>
-              <div className="flex flex-wrap gap-2.5">
-                {phoneModels.map((model) => {
-                  const isSelected =
-                    selectedModelInfo && selectedModelInfo.id === model.id;
-                  return (
-                    <button
-                      key={model.id}
-                      onClick={() => setSelectedModelId(model.id)}
-                      className={`px-3.5 py-1.5 rounded-[100px] text-[13px] border ${
-                        isSelected
-                          ? "border-[#222] text-[#222] font-bold bg-white"
-                          : "border-[#e0e0e0] text-[#222] bg-white hover:border-[#b0b0b0]"
-                      }`}
-                    >
-                      {model.name}
-                    </button>
-                  );
-                })}
+              <div className="w-full">
+                <select
+                  value={selectedModelId}
+                  onChange={(e) => setSelectedModelId(e.target.value)}
+                  className="w-full p-3 border border-[#e0e0e0] rounded-lg text-[14px] bg-white outline-none focus:border-[#222] transition-colors"
+                >
+                  {(() => {
+                    const brands = Array.from(
+                      new Set(phoneModels.map((m) => m.brand)),
+                    );
+
+                    if (brands.length > 1) {
+                      return brands.map((brand) => (
+                        <optgroup
+                          key={brand}
+                          label={
+                            brand === "apple"
+                              ? "Apple iPhone"
+                              : brand === "samsung"
+                                ? "Samsung Galaxy"
+                                : brand.toUpperCase()
+                          }
+                        >
+                          {phoneModels
+                            .filter((m) => m.brand === brand)
+                            .map((model) => (
+                              <option
+                                key={model.id}
+                                value={model.id}
+                                disabled={model.stock <= 0}
+                              >
+                                {model.name}{" "}
+                                {model.stock !== undefined
+                                  ? `(${model.stock})`
+                                  : ""}{" "}
+                                {model.stock <= 0 ? "- Out of Stock" : ""}
+                              </option>
+                            ))}
+                        </optgroup>
+                      ));
+                    } else {
+                      return phoneModels.map((model) => (
+                        <option
+                          key={model.id}
+                          value={model.id}
+                          disabled={model.stock <= 0}
+                        >
+                          {model.name}{" "}
+                          {model.stock !== undefined ? `(${model.stock})` : ""}{" "}
+                          {model.stock <= 0 ? "- Out of Stock" : ""}
+                        </option>
+                      ));
+                    }
+                  })()}
+                </select>
               </div>
             </div>
 

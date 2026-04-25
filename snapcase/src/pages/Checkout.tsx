@@ -38,6 +38,8 @@ export function Checkout() {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [couponError, setCouponError] = useState("");
   const [bankDetails, setBankDetails] = useState("");
+  const [telegramBotToken, setTelegramBotToken] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +66,8 @@ export function Checkout() {
         try {
           const parsed = JSON.parse(data.description);
           setBankDetails(parsed.bankDetails || "");
+          setTelegramBotToken(parsed.telegramBotToken || "");
+          setTelegramChatId(parsed.telegramChatId || "");
         } catch (e) {
           setBankDetails(data.description);
         }
@@ -228,6 +232,112 @@ export function Checkout() {
       });
 
       if (error) throw error;
+
+      // Deduct stock for each item
+      for (const item of items) {
+        if (!item.productId) continue;
+
+        // baseProductId is preferred. If absent, fallback to original logic or try parsing the uuid.
+        // product id is typically a uuid, so it would be the first 36 chars if we appended to it.
+        let actualProductId = item.baseProductId || item.productId;
+        if (
+          (!item.baseProductId && item.productId.includes("-ip")) ||
+          item.productId.includes("-s2")
+        ) {
+          // this is weak string splitting, let's just grab the first part that looks like a UUID or just split by our known separators.
+          // actually UUID is 36 chars: 8-4-4-4-12
+          if (item.productId.length > 36 && item.productId.charAt(36) === "-") {
+            actualProductId = item.productId.substring(0, 36);
+          }
+        }
+
+        try {
+          const { data: productData, error: productError } = await supabase
+            .from("products")
+            .select("description, stock")
+            .eq("id", actualProductId)
+            .single();
+
+          if (productData && !productError) {
+            let meta =
+              productData.description && productData.description.startsWith("{")
+                ? JSON.parse(productData.description)
+                : { text: productData.description || "" };
+            let updatedStock = false;
+
+            if (item.phoneModel && meta.models && Array.isArray(meta.models)) {
+              meta.models = meta.models.map((m: any) => {
+                let mObj =
+                  typeof m === "string" ? { name: m, stock: 100 } : { ...m };
+                if ((mObj.name || mObj.id) === item.phoneModel) {
+                  mObj.stock = Math.max(
+                    0,
+                    (mObj.stock !== undefined ? mObj.stock : 100) -
+                      item.quantity,
+                  );
+                  updatedStock = true;
+                }
+                return mObj;
+              });
+            }
+
+            let updatePayload: any = {};
+            if (updatedStock) {
+              updatePayload.description = JSON.stringify(meta);
+            } else {
+              if (meta.stock !== undefined) {
+                meta.stock = Math.max(0, meta.stock - item.quantity);
+                updatePayload.description = JSON.stringify(meta);
+              } else {
+                updatePayload.stock = Math.max(
+                  0,
+                  (productData.stock || 0) - item.quantity,
+                );
+              }
+            }
+
+            if (Object.keys(updatePayload).length > 0) {
+              await supabase
+                .from("products")
+                .update(updatePayload)
+                .eq("id", actualProductId);
+            }
+          }
+        } catch (e) {
+          console.error("Error updating stock", e);
+        }
+      }
+
+      // Send Telegram notification
+      if (telegramBotToken && telegramChatId) {
+        try {
+          const itemsListText = items.map(item => `- ${item.quantity}x ${item.name}`).join('\n');
+          const messageText = `🛒 *New Order* #\`${orderId}\`
+👤 *Name:* ${data.fullName}
+📞 *Phone:* ${data.phone}
+📍 *Address:* ${data.address}
+💰 *Total:* $${finalPrice.toFixed(2)}
+${discountAmount > 0 ? `🎫 *Coupon:* - $${discountAmount}\n` : ''}
+📦 *Items:*
+${itemsListText}
+
+📄 [Payment Proof](${imageUrl})`;
+
+          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              chat_id: telegramChatId,
+              text: messageText,
+              parse_mode: 'Markdown',
+            }),
+          });
+        } catch (botErr) {
+          console.error("Error sending telegram notification", botErr);
+        }
+      }
 
       clearCart();
       setSuccessOrderId(orderId);

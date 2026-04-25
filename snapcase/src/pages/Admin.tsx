@@ -124,12 +124,71 @@ const pickerStyles =
   }
 `;
 
+const APPLE_MODELS = [
+  "iPhone 16 Pro Max",
+  "iPhone 16 Pro",
+  "iPhone 16 Plus",
+  "iPhone 16",
+  "iPhone 15 Pro Max",
+  "iPhone 15 Pro",
+  "iPhone 15 Plus",
+  "iPhone 15",
+  "iPhone 14 Pro Max",
+  "iPhone 14 Pro",
+  "iPhone 14 Plus",
+  "iPhone 14",
+  "iPhone 13 Pro Max",
+  "iPhone 13 Pro",
+  "iPhone 13 mini",
+  "iPhone 13",
+  "iPhone 12 Pro Max",
+  "iPhone 12 Pro",
+  "iPhone 12 mini",
+  "iPhone 12",
+  "iPhone 11 Pro Max",
+  "iPhone 11 Pro",
+  "iPhone 11",
+  "iPhone XS Max",
+  "iPhone XS",
+  "iPhone XR",
+  "iPhone X",
+];
+
+const SAMSUNG_MODELS = [
+  "Galaxy S24 Ultra",
+  "Galaxy S24+",
+  "Galaxy S24",
+  "Galaxy S23 Ultra",
+  "Galaxy S23+",
+  "Galaxy S23",
+  "Galaxy S23 FE",
+  "Galaxy S22 Ultra",
+  "Galaxy S22+",
+  "Galaxy S22",
+  "Galaxy S21 Ultra",
+  "Galaxy S21+",
+  "Galaxy S21",
+  "Galaxy S21 FE",
+  "Galaxy Z Fold5",
+  "Galaxy Z Flip5",
+  "Galaxy Z Fold4",
+  "Galaxy Z Flip4",
+  "Galaxy Z Fold3",
+  "Galaxy Z Flip3",
+  "Galaxy A55",
+  "Galaxy A54",
+  "Galaxy A53",
+  "Galaxy A35",
+  "Galaxy A34",
+  "Galaxy A33",
+];
+
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
   price: z.number().min(0, "Price must be a positive number"),
   category: z.string().min(1, "Category is required"),
-  stock: z.number().min(0, "Stock must be a positive number"),
+  stock: z.number().optional().default(0),
   is_featured: z.boolean().optional(),
 
   // New customization fields
@@ -178,15 +237,21 @@ export function Admin() {
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isEditingProductForm, setIsEditingProductForm] = useState(false);
   const [editProductData, setEditProductData] = useState<any>(null);
-  const [compatibleModels, setCompatibleModels] = useState<string[]>([]);
-  const [editCompatibleModels, setEditCompatibleModels] = useState<string[]>(
-    [],
-  );
+  const [compatibleModels, setCompatibleModels] = useState<any[]>([]);
+  const [editCompatibleModels, setEditCompatibleModels] = useState<any[]>([]);
   const [modelInput, setModelInput] = useState("");
+  const [modelStockInput, setModelStockInput] = useState<number>(0);
+  const [appleModelSelect, setAppleModelSelect] = useState("");
+  const [samsungModelSelect, setSamsungModelSelect] = useState("");
   const [editModelInput, setEditModelInput] = useState("");
+  const [editModelStockInput, setEditModelStockInput] = useState<number>(0);
+  const [editAppleModelSelect, setEditAppleModelSelect] = useState("");
+  const [editSamsungModelSelect, setEditSamsungModelSelect] = useState("");
 
   const [editPrice, setEditPrice] = useState<number>(0);
   const [bankDetails, setBankDetails] = useState("bKash / Nagad: 01700-000000");
+  const [telegramBotToken, setTelegramBotToken] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
   const [menuItems, setMenuItems] = useState<{ name: string; path: string }[]>([
     { name: "HOME", path: "/" },
     { name: "NEW!", path: "/products" },
@@ -455,6 +520,8 @@ export function Admin() {
           try {
             const parsed = JSON.parse(settings.description);
             if (parsed.bankDetails) setBankDetails(parsed.bankDetails);
+            if (parsed.telegramBotToken) setTelegramBotToken(parsed.telegramBotToken);
+            if (parsed.telegramChatId) setTelegramChatId(parsed.telegramChatId);
             if (parsed.menuItems) setMenuItems(parsed.menuItems);
             if (parsed.socialLinks) setSocialLinks(parsed.socialLinks);
             if (parsed.headerLogoImage !== undefined)
@@ -671,7 +738,7 @@ export function Admin() {
             } = supabase.storage.from("products").getPublicUrl(p);
             cvUrl = url;
           }
-          finalColors.push({ name: cv.name.trim(), url: cvUrl || publicUrl }); // fallback to main if no image provided
+          finalColors.push({ name: cv.name.trim(), url: cvUrl || "" }); // removed fallback to main if no image provided
         }
       }
 
@@ -814,7 +881,7 @@ export function Admin() {
           }
           finalColors.push({
             name: cv.name.trim(),
-            url: cvUrl || finalImageUrl,
+            url: cvUrl || "",
           });
         }
       }
@@ -1288,12 +1355,6 @@ export function Admin() {
                     {...registerEdit("price", { valueAsNumber: true })}
                     error={errorsEdit.price?.message}
                   />
-                  <Input
-                    label="Stock"
-                    type="number"
-                    {...registerEdit("stock", { valueAsNumber: true })}
-                    error={errorsEdit.stock?.message}
-                  />
 
                   <div className="md:col-span-2 flex items-center gap-2">
                     <input
@@ -1385,7 +1446,7 @@ export function Admin() {
                         </div>
                         <div className="flex-1 min-w-[200px]">
                           <label className="block text-xs font-medium text-text-main mb-1">
-                            Image (Optional, will use main if empty)
+                            Image (Optional)
                           </label>
                           <input
                             type="file"
@@ -1473,48 +1534,82 @@ export function Admin() {
 
                       <div className="sm:col-span-2 lg:col-span-3">
                         <label className="block text-sm font-medium text-text-main mb-1.5">
-                          Compatible Models (Press Enter to add)
+                          Compatible Models
                         </label>
-                        <div className="flex gap-2 mb-2">
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <select
+                            className="px-3 py-2 rounded-xl border border-gray-200 bg-surface flex-1 min-w-[140px]"
+                            value={editAppleModelSelect}
+                            onChange={(e) =>
+                              setEditAppleModelSelect(e.target.value)
+                            }
+                          >
+                            <option value="">Apple Models</option>
+                            {APPLE_MODELS.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+
+                          <select
+                            className="px-3 py-2 rounded-xl border border-gray-200 bg-surface flex-1 min-w-[140px]"
+                            value={editSamsungModelSelect}
+                            onChange={(e) =>
+                              setEditSamsungModelSelect(e.target.value)
+                            }
+                          >
+                            <option value="">Samsung Models</option>
+                            {SAMSUNG_MODELS.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+
                           <input
                             type="text"
-                            className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-surface"
-                            placeholder="e.g. Galaxy S24 Ultra"
+                            className="flex-[2] px-4 py-2 rounded-xl border border-gray-200 bg-surface min-w-[150px]"
+                            placeholder="Custom Model"
                             value={editModelInput}
                             onChange={(e) => setEditModelInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                if (
-                                  editModelInput.trim() &&
-                                  !editCompatibleModels.includes(
-                                    editModelInput.trim(),
-                                  )
-                                ) {
-                                  setEditCompatibleModels([
-                                    ...editCompatibleModels,
-                                    editModelInput.trim(),
-                                  ]);
-                                  setEditModelInput("");
-                                }
-                              }
-                            }}
+                          />
+                          <input
+                            type="number"
+                            className="w-24 px-4 py-2 rounded-xl border border-gray-200 bg-surface"
+                            placeholder="Stock"
+                            value={editModelStockInput}
+                            onChange={(e) =>
+                              setEditModelStockInput(
+                                parseInt(e.target.value) || 0,
+                              )
+                            }
                           />
                           <Button
                             type="button"
                             variant="outline"
                             onClick={() => {
+                              const toAdd =
+                                editAppleModelSelect ||
+                                editSamsungModelSelect ||
+                                editModelInput.trim();
                               if (
-                                editModelInput.trim() &&
-                                !editCompatibleModels.includes(
-                                  editModelInput.trim(),
+                                toAdd &&
+                                !editCompatibleModels.some(
+                                  (m) => (m.name || m) === toAdd,
                                 )
                               ) {
                                 setEditCompatibleModels([
                                   ...editCompatibleModels,
-                                  editModelInput.trim(),
+                                  {
+                                    name: toAdd,
+                                    stock: editModelStockInput,
+                                  },
                                 ]);
                                 setEditModelInput("");
+                                setEditAppleModelSelect("");
+                                setEditSamsungModelSelect("");
+                                setEditModelStockInput(0);
                               }
                             }}
                           >
@@ -1527,14 +1622,18 @@ export function Admin() {
                               key={idx}
                               className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full text-sm"
                             >
-                              <span>{model}</span>
+                              <span>
+                                {model.name || model} (
+                                {model.stock !== undefined ? model.stock : 100})
+                              </span>
                               <button
                                 type="button"
                                 className="text-gray-500 hover:text-red-500 font-bold ml-1"
                                 onClick={() =>
                                   setEditCompatibleModels(
                                     editCompatibleModels.filter(
-                                      (m) => m !== model,
+                                      (m) =>
+                                        (m.name || m) !== (model.name || model),
                                     ),
                                   )
                                 }
@@ -1654,12 +1753,6 @@ export function Admin() {
                     {...register("price", { valueAsNumber: true })}
                     error={errors.price?.message}
                   />
-                  <Input
-                    label="Stock"
-                    type="number"
-                    {...register("stock", { valueAsNumber: true })}
-                    error={errors.stock?.message}
-                  />
 
                   <div className="md:col-span-2 flex items-center gap-2">
                     <input
@@ -1744,7 +1837,7 @@ export function Admin() {
                         </div>
                         <div className="flex-1 min-w-[200px]">
                           <label className="block text-xs font-medium text-text-main mb-1">
-                            Image (Optional, will use main if empty)
+                            Image (Optional)
                           </label>
                           <input
                             type="file"
@@ -1839,44 +1932,80 @@ export function Admin() {
 
                       <div className="sm:col-span-2 lg:col-span-3">
                         <label className="block text-sm font-medium text-text-main mb-1.5">
-                          Compatible Models (Press Enter to add)
+                          Compatible Models
                         </label>
-                        <div className="flex gap-2 mb-2">
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <select
+                            className="px-3 py-2 rounded-xl border border-gray-200 bg-surface flex-1 min-w-[140px]"
+                            value={appleModelSelect}
+                            onChange={(e) =>
+                              setAppleModelSelect(e.target.value)
+                            }
+                          >
+                            <option value="">Apple Models</option>
+                            {APPLE_MODELS.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+
+                          <select
+                            className="px-3 py-2 rounded-xl border border-gray-200 bg-surface flex-1 min-w-[140px]"
+                            value={samsungModelSelect}
+                            onChange={(e) =>
+                              setSamsungModelSelect(e.target.value)
+                            }
+                          >
+                            <option value="">Samsung Models</option>
+                            {SAMSUNG_MODELS.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+
                           <input
                             type="text"
-                            className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-surface"
-                            placeholder="e.g. Galaxy S24 Ultra"
+                            className="flex-[2] px-4 py-2 rounded-xl border border-gray-200 bg-surface min-w-[150px]"
+                            placeholder="Custom Model"
                             value={modelInput}
                             onChange={(e) => setModelInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                if (
-                                  modelInput.trim() &&
-                                  !compatibleModels.includes(modelInput.trim())
-                                ) {
-                                  setCompatibleModels([
-                                    ...compatibleModels,
-                                    modelInput.trim(),
-                                  ]);
-                                  setModelInput("");
-                                }
-                              }
-                            }}
+                          />
+                          <input
+                            type="number"
+                            className="w-24 px-4 py-2 rounded-xl border border-gray-200 bg-surface"
+                            placeholder="Stock"
+                            value={modelStockInput}
+                            onChange={(e) =>
+                              setModelStockInput(parseInt(e.target.value) || 0)
+                            }
                           />
                           <Button
                             type="button"
                             variant="outline"
                             onClick={() => {
+                              const toAdd =
+                                appleModelSelect ||
+                                samsungModelSelect ||
+                                modelInput.trim();
                               if (
-                                modelInput.trim() &&
-                                !compatibleModels.includes(modelInput.trim())
+                                toAdd &&
+                                !compatibleModels.some(
+                                  (m) => (m.name || m) === toAdd,
+                                )
                               ) {
                                 setCompatibleModels([
                                   ...compatibleModels,
-                                  modelInput.trim(),
+                                  {
+                                    name: toAdd,
+                                    stock: modelStockInput,
+                                  },
                                 ]);
                                 setModelInput("");
+                                setAppleModelSelect("");
+                                setSamsungModelSelect("");
+                                setModelStockInput(0);
                               }
                             }}
                           >
@@ -1889,13 +2018,19 @@ export function Admin() {
                               key={idx}
                               className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full text-sm"
                             >
-                              <span>{model}</span>
+                              <span>
+                                {model.name || model} (
+                                {model.stock !== undefined ? model.stock : 100})
+                              </span>
                               <button
                                 type="button"
                                 className="text-gray-500 hover:text-red-500 font-bold ml-1"
                                 onClick={() =>
                                   setCompatibleModels(
-                                    compatibleModels.filter((m) => m !== model),
+                                    compatibleModels.filter(
+                                      (m) =>
+                                        (m.name || m) !== (model.name || model),
+                                    ),
                                   )
                                 }
                               >
@@ -1968,7 +2103,6 @@ export function Admin() {
                     <th className="pb-3 font-medium">Product</th>
                     <th className="pb-3 font-medium">Category</th>
                     <th className="pb-3 font-medium">Hero / Featured</th>
-                    <th className="pb-3 font-medium">Stock</th>
                     <th className="pb-3 font-medium">Price</th>
                     <th className="pb-3 font-medium text-right">Actions</th>
                   </tr>
@@ -2000,9 +2134,6 @@ export function Admin() {
                         </td>
                         <td className="py-4 text-sm text-text-muted">
                           {product.is_featured ? "Yes" : "No"}
-                        </td>
-                        <td className="py-4 text-sm text-text-muted">
-                          {stockToShow}
                         </td>
                         <td className="py-4 text-sm font-medium">
                           ${(product.price || 0).toFixed(2)}
@@ -2919,6 +3050,36 @@ export function Admin() {
                   onChange={(e) => setBankDetails(e.target.value)}
                   placeholder="e.g. Please transfer to bKash 01700-000000"
                 />
+
+                <h3 className="text-lg font-medium mb-3 mt-6 border-t pt-6">
+                  Telegram Auto Notifications
+                </h3>
+                <p className="text-sm text-text-muted mb-4">
+                  Configure Telegram bot token and chat ID to receive new order notifications.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Bot Token</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                      value={telegramBotToken}
+                      onChange={(e) => setTelegramBotToken(e.target.value)}
+                      placeholder="e.g. 123456789:ABCdefGHIjklMNO..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Chat ID</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                      value={telegramChatId}
+                      onChange={(e) => setTelegramChatId(e.target.value)}
+                      placeholder="e.g. -100123456789 or 123456789"
+                    />
+                  </div>
+                </div>
+
                 <h3 className="text-lg font-medium mb-3 mt-6 border-t pt-6">
                   Home Page Configuration
                 </h3>
@@ -3872,6 +4033,8 @@ export function Admin() {
 
                       const settingsData = {
                         bankDetails,
+                        telegramBotToken,
+                        telegramChatId,
                         menuItems,
                         socialLinks,
                         headerLogoImage: finalHeaderLogoImage,
