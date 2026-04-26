@@ -1,18 +1,19 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Navbar } from './components/Navbar';
-import { Footer } from './components/Footer';
-import { Home } from './pages/Home';
-import { Login } from './pages/Login';
-import { ResetPassword } from './pages/ResetPassword';
-import { ProductDetails } from './pages/ProductDetails';
-import { Checkout } from './pages/Checkout';
-import { Dashboard } from './pages/Dashboard';
-import { Admin } from './pages/Admin';
-import { Products } from './pages/Products';
-import { Contact } from './pages/Contact';
-import { Returns } from './pages/Returns';
-import { Terms } from './pages/Terms';
-import { useAuthStore } from './store/useAuthStore';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Navbar } from "./components/Navbar";
+import { Footer } from "./components/Footer";
+import { Home } from "./pages/Home";
+import { Login } from "./pages/Login";
+import { ResetPassword } from "./pages/ResetPassword";
+import { ProductDetails } from "./pages/ProductDetails";
+import { Checkout } from "./pages/Checkout";
+import { Dashboard } from "./pages/Dashboard";
+import { Admin } from "./pages/Admin";
+import { Products } from "./pages/Products";
+import { Contact } from "./pages/Contact";
+import { Returns } from "./pages/Returns";
+import { Terms } from "./pages/Terms";
+import { NotFound } from "./pages/NotFound";
+import { useAuthStore } from "./store/useAuthStore";
 
 export default function App() {
   const { isAuthReady } = useAuthStore();
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />
